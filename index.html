@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020"><title>NHÍT AI - Làm phim</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0b1020;color:#f5f7ff;font:15px Arial,sans-serif}
+main{max-width:760px;margin:auto;padding:18px}.logo{font-size:29px;font-weight:900;letter-spacing:.4px}.sub{color:#aab4d0;margin:7px 0 18px}
+.card{background:#151d33;border:1px solid #293453;border-radius:17px;padding:16px;margin:13px 0}
+h2{font-size:18px;margin:0 0 12px}label{display:block;color:#b9c5e3;margin:11px 0 6px}
+input,textarea,select{width:100%;background:#0d1529;color:white;border:1px solid #344365;border-radius:10px;padding:12px;font:inherit}
+textarea{min-height:120px;resize:vertical}button,.filebtn{width:100%;padding:13px;border:0;border-radius:11px;background:#5967ff;color:white;font-size:15px;font-weight:700;margin-top:10px}
+button.secondary{background:#27324f}button:disabled{opacity:.5}.status{color:#aab4d0;line-height:1.5;margin-top:10px;white-space:pre-wrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:520px){.grid{grid-template-columns:1fr}}
+video,img{width:100%;border-radius:12px;margin-top:12px;background:#070b14}pre{white-space:pre-wrap;word-break:break-word;color:#dce4ff}
+.small{font-size:12px;color:#93a1c3}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{width:auto;flex:1}
+a{color:#aebaff}
+</style></head>
+<body><main>
+<div class="logo">🎬 NHÍT AI</div><div class="sub">Trợ lý sản xuất phim AI · Phiên bản thử nghiệm</div>
+<section class="card">
+<h2>1. Kết nối máy chủ</h2>
+<div id="connection" class="status">Đang kiểm tra máy chủ...</div>
+<p class="small">Khóa API được lưu ở máy chủ trong file .env, không nhập khóa vào giao diện điện thoại.</p>
+</section>
+<section class="card">
+<h2>2. Viết kịch bản phim</h2>
+<label>Model văn bản (nhập theo danh mục tài khoản)</label><input id="textModel" value="openai" placeholder="Ví dụ: tên model trong danh mục">
+<label>Yêu cầu kịch bản</label>
+<textarea id="scriptPrompt">Viết kịch bản phim kinh dị làng quê Việt Nam gồm 5 cảnh. Mỗi cảnh ghi rõ bối cảnh, hành động, nhân vật đang nói và lời thoại. Không để nhân vật nói nhầm lời của nhau. Viết hoàn toàn bằng tiếng Việt.</textarea>
+<button onclick="makeScript()">✨ Tạo kịch bản bằng AI</button>
+<div id="scriptStatus" class="status"></div><textarea id="scriptResult" placeholder="Kịch bản sẽ xuất hiện ở đây..."></textarea>
+</section>
+<section class="card">
+<h2>3. Tạo hình ảnh cảnh phim</h2>
+<label>Model hình ảnh</label><input id="imageModel" placeholder="Nhập model hình ảnh có trong danh mục">
+<label>Mô tả cảnh</label><textarea id="imagePrompt" placeholder="Ví dụ: Người phụ nữ đứng trước căn nhà gỗ giữa làng quê ban đêm..."></textarea>
+<button onclick="makeImage()">🖼️ Tạo hình ảnh</button><div id="imageStatus" class="status"></div><img id="imageOut" hidden>
+</section>
+<section class="card">
+<h2>4. Tạo video AI</h2>
+<label>Model video</label><input id="videoModel" placeholder="Nhập model video có trong danh mục">
+<label>Mô tả chuyển động và cảnh quay</label><textarea id="videoPrompt" placeholder="Mô tả nhân vật, hành động, máy quay, ánh sáng, phong cách phim..."></textarea>
+<label>Thời lượng (giây)</label><select id="duration"><option>4</option><option selected>5</option><option>6</option><option>8</option><option>10</option></select>
+<button onclick="makeVideo()">🎥 Tạo video MP4</button><div id="videoStatus" class="status"></div><video id="videoOut" controls hidden></video>
+</section>
+<section class="card">
+<h2>5. Tạo phụ đề SRT</h2>
+<label>Dán lời thoại (mỗi dòng một câu)</label><textarea id="dialogue" placeholder="Lan: Cậu về từ bao giờ vậy?&#10;Ngọc: Tôi vừa mới về."></textarea>
+<div class="grid"><div><label>Thời gian bắt đầu (giây)</label><input id="start" type="number" min="0" value="0"></div><div><label>Thời lượng mỗi câu (giây)</label><input id="perLine" type="number" min="1" value="3"></div></div>
+<button onclick="makeSrt()">Tạo và tải SRT</button><div id="srtStatus" class="status"></div>
+</section>
+<section class="card">
+<h2>6. Danh mục model</h2><button class="secondary" onclick="loadModels()">Tải danh mục model</button><pre id="modelsOut" class="small"></pre>
+</section>
+<div class="small">Lưu ý: đây là bản MVP. Tạo video/hình ảnh phụ thuộc model đang hoạt động, quyền API và số dư/giới hạn của nhà cung cấp. Không có chức năng giả lập thành công.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+async function call(url,body){
+ const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+ if(!r.ok){let t=await r.text();throw new Error(t.slice(0,1200))}
+ return r;
+}
+async function check(){
+ try{let r=await fetch('/api/health');let d=await r.json();$('connection').textContent=d.key_configured?'Đã kết nối máy chủ NHÍT AI. API key đã được cấu hình.':'Máy chủ chạy nhưng chưa cấu hình API key trong .env.'}
+ catch(e){$('connection').textContent='Không kết nối được máy chủ: '+e.message}
+}
+async function makeScript(){
+ $('scriptStatus').textContent='Đang gửi yêu cầu đến máy chủ AI...';
+ try{let r=await call('/api/script',{prompt:$('scriptPrompt').value,model:$('textModel').value.trim()||'openai'});
+ let d=await r.json();$('scriptResult').value=d.text;$('scriptStatus').textContent='Hoàn tất: máy chủ đã trả về nội dung.'}
+ catch(e){$('scriptStatus').textContent='Lỗi: '+e.message}
+}
+async function makeImage(){
+ $('imageStatus').textContent='Đang tạo ảnh trên máy chủ...';$('imageOut').hidden=true;
+ try{let r=await call('/api/image',{prompt:$('imagePrompt').value,model:$('imageModel').value.trim()});
+ let blob=await r.blob();$('imageOut').src=URL.createObjectURL(blob);$('imageOut').hidden=false;$('imageStatus').textContent='Đã nhận ảnh từ máy chủ.'}
+ catch(e){$('imageStatus').textContent='Lỗi: '+e.message}
+}
+async function makeVideo(){
+ $('videoStatus').textContent='Đang gửi yêu cầu. Tạo video có thể mất vài phút...';$('videoOut').hidden=true;
+ try{let r=await call('/api/video',{prompt:$('videoPrompt').value,model:$('videoModel').value.trim(),duration:Number($('duration').value)});
+ let blob=await r.blob();$('videoOut').src=URL.createObjectURL(blob);$('videoOut').hidden=false;$('videoStatus').textContent='Đã nhận video MP4 từ máy chủ.'}
+ catch(e){$('videoStatus').textContent='Lỗi: '+e.message}
+}
+function stamp(sec){let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=Math.floor(sec%60),ms=Math.round((sec-Math.floor(sec))*1000);return [h,m,s].map(x=>String(x).padStart(2,'0')).join(':')+','+String(ms).padStart(3,'0')}
+function makeSrt(){
+ let lines=$('dialogue').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),t=Number($('start').value)||0,d=Math.max(1,Number($('perLine').value)||3);
+ if(!lines.length){$('srtStatus').textContent='Hãy nhập lời thoại trước.';return}
+ let srt=lines.map((line,i)=>`${i+1}\n${stamp(t+i*d)} --> ${stamp(t+(i+1)*d)}\n${line}`).join('\n\n')+'\n';
+ let a=document.createElement('a'),blob=new Blob([srt],{type:'text/plain;charset=utf-8'});a.href=URL.createObjectURL(blob);a.download='nhit-ai.srt';a.click();URL.revokeObjectURL(a.href);$('srtStatus').textContent=`Đã tạo ${lines.length} dòng phụ đề. Thời gian hiện chia đều, cần căn chỉnh lại theo lời nói thực tế.`
+}
+async function loadModels(){
+ $('modelsOut').textContent='Đang tải...';
+ try{let r=await fetch('/api/models');if(!r.ok)throw new Error(await r.text());let d=await r.json();$('modelsOut').textContent=JSON.stringify(d,null,2).slice(0,12000)}
+ catch(e){$('modelsOut').textContent='Lỗi: '+e.message}
+}
+check();
+</script></body></html>

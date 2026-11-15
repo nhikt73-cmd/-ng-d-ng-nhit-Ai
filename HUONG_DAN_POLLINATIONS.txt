@@ -1,0 +1,22 @@
+HUONG DAN KET NOI NHIT AI VOI POLLINATIONS
+
+1) Dang ky/dang nhap: https://enter.pollinations.ai/
+2) Tao Secret Key (bat dau bang sk_). Khong dung pk_ lam token goi API.
+3) Tao key chi cap quyen model can dung: text, image, video. Dat budget/expiry thap de thu nghiem.
+4) Tren may chu, tao file .env tu .env.example va dat:
+   POLLINATIONS_API_KEY=sk_xxxxxxxxx
+5) Khong dua .env vao GitHub hoac static/index.html.
+6) Cai dat:
+   pip install -r requirements.txt
+7) Chay:
+   uvicorn server:app --host 0.0.0.0 --port 8000
+8) Mo tren Android bang dia chi HTTPS cua may chu.
+9) Bam 'Tai danh muc model' trong NHIT AI, chon dung model ID hien thi cho tung loai tac vu.
+10) Chi dung model co gia 0 Pollen neu muon thu mien phi. Kiem tra gia truoc moi lan tao.
+
+Luu y:
+- API key can thiet de tao noi dung; tai khoan khong dong nghia voi su dung mien phi vo han.
+- Model va gia co the thay doi.
+- Video co the can cho lau; ban MVP hien tai goi video dong bo va co the timeout voi clip lau.
+- SRT trong ban MVP chia thoi gian deu, chua tu dong can khop am thanh.
+- Tai lieu: https://gen.pollinations.ai/docs
